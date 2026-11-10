@@ -1,0 +1,525 @@
+\documentclass[12pt,a4paper]{report}
+
+% -------------------------------------------------
+% Packages
+% -------------------------------------------------
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{setspace}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue
+}
+\onehalfspacing
+\setlength{\parskip}{4pt}
+\setlength{\parindent}{0pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Mathematics Assignment Report}
+\fancyhead[R]{PCA, LDA and SVD}
+\fancyfoot[C]{\thepage}
+
+% Figure helper: displays the image if it exists, otherwise a visible reminder.
+\newcommand{\reportfigure}[3][0.88\textwidth]{%
+\begin{figure}[H]
+    \centering
+    \IfFileExists{#2}{
+        \includegraphics[width=#1]{#2}
+    }{
+        \fbox{\parbox[c][4cm][c]{0.82\textwidth}{\centering
+        Figure file not found: \texttt{#2}\\
+        Place the corresponding plot in the report folder or update this filename.}}
+    }
+    \caption{#3}
+\end{figure}
+}
+
+\title{\textbf{Mathematics Assignment Report}\\[0.5em]
+\large PCA, LDA and SVD for Face Image Analysis and Movie Recommendation}
+\author{Student Name: \underline{\hspace{7cm}}\\[0.5em]
+Course: \underline{\hspace{7.7cm}}\\
+Professor: \underline{\hspace{7.3cm}}}
+\date{November 2026}
+
+\begin{document}
+\maketitle
+\pagenumbering{roman}
+\tableofcontents
+\clearpage
+\pagenumbering{arabic}
+
+% =================================================
+\chapter{Question 1: Principal Component Analysis (PCA)}
+% =================================================
+
+\section{Objective}
+The objective of this experiment is to implement Principal Component Analysis (PCA) manually on the CMU PIE face dataset and study how selected principal components represent facial structure and illumination variation. The implementation avoids built-in PCA and SVD routines. Eigenvalue and eigenvector computation is performed using an allowed symmetric eigensolver.
+
+The main objectives are:
+\begin{itemize}[nosep]
+    \item Construct separate image matrices for the Lights and NoLights conditions.
+    \item Compute principal components using eigenvalue decomposition.
+    \item Reconstruct selected facial images using PC1--PC3 and PC5--PC9.
+    \item Compare visual reconstruction and mean squared error (MSE).
+    \item Examine whether the dominant components represent identity, illumination, or both.
+\end{itemize}
+
+\section{Dataset Description}
+The PIE subset contains five subjects: Person1, Person2, Person9, Person19 and Person46. Each subject contributes 21 grayscale images under each of two illumination conditions:
+\begin{itemize}[nosep]
+    \item \textbf{Lights:} room lighting is on in addition to the flash.
+    \item \textbf{NoLights:} room lighting is off and illumination is provided by the flash.
+\end{itemize}
+Each image has a resolution of $100\times100$ pixels. Therefore, each image is flattened into a vector of 10,000 features. Each condition contains $5\times21=105$ images, giving a data matrix
+\[
+X\in\mathbb{R}^{105\times10000}.
+\]
+
+\section{Methodology}
+Let $X$ denote the image matrix and $N=105$ the number of images. The mean face is
+\[
+\boldsymbol{\mu}=\frac{1}{N}\sum_{i=1}^{N}\mathbf{x}_i.
+\]
+The centered data matrix is
+\[
+X_c=X-\boldsymbol{\mu}.
+\]
+Since the number of features is much larger than the number of samples, the smaller dual Gram matrix was used:
+\[
+G=\frac{1}{N-1}X_cX_c^T,\qquad G\in\mathbb{R}^{105\times105}.
+\]
+The eigenvalue problem is
+\[
+G\mathbf{v}_i=\lambda_i\mathbf{v}_i.
+\]
+Eigenvalues are sorted in descending order. The corresponding principal directions in the original pixel space are recovered by
+\[
+\mathbf{p}_i=
+\frac{X_c^T\mathbf{v}_i}
+{\sqrt{(N-1)\lambda_i}}.
+\]
+For a selected set of components represented by the rows of $P_k$, an image is projected and reconstructed as
+\[
+\mathbf{z}=(\mathbf{x}-\boldsymbol{\mu})P_k^T,
+\qquad
+\hat{\mathbf{x}}=\boldsymbol{\mu}+\mathbf{z}P_k.
+\]
+The reconstruction error is measured using
+\[
+\operatorname{MSE}=\frac{1}{D}\sum_{j=1}^{D}(x_j-\hat{x}_j)^2,
+\]
+where $D=10,000$ pixels.
+
+\section{Implementation Details}
+The PCA computation was implemented using matrix multiplication and \texttt{numpy.linalg.eigh}. The implementation did not call \texttt{sklearn.decomposition.PCA}, \texttt{numpy.linalg.svd}, \texttt{scipy.linalg.svd}, \texttt{scipy.sparse.linalg.svds}, or \texttt{TruncatedSVD}. The Lights and NoLights datasets were processed independently.
+
+\section{Experimental Setup}
+For both illumination conditions, selected images were reconstructed using:
+\begin{itemize}[nosep]
+    \item PC1--PC3: the first three principal components.
+    \item PC5--PC9: the fifth through ninth principal components.
+    \item PC1--PC9: the first nine components, used as an additional numerical comparison.
+\end{itemize}
+The experiment included same-subject images under different flash directions and different subjects under the same flash direction. MSE was also calculated over all 105 images in each illumination condition.
+
+\section{Results}
+
+\subsection{Visual Reconstruction}
+% Replace the filenames below with the actual saved plot names.
+\reportfigure{figures/q1_lights_reconstruction.png}
+{Representative original and reconstructed images for the Lights condition.}
+\reportfigure{figures/q1_nolights_reconstruction.png}
+{Representative original and reconstructed images for the NoLights condition.}
+
+\subsection{Explained Variance}
+The first nine principal components account for the following cumulative proportions of variance.
+
+\begin{table}[H]
+\centering
+\caption{Explained variance for the Lights condition}
+\begin{tabular}{ccc}
+\toprule
+Component & Individual variance (\%) & Cumulative variance (\%)\\
+\midrule
+PC1 & 32.685 & 32.685\\
+PC2 & 29.617 & 62.301\\
+PC3 & 19.215 & 81.516\\
+PC4 & 6.275 & 87.791\\
+PC5 & 3.095 & 90.886\\
+PC6 & 2.312 & 93.198\\
+PC7 & 1.304 & 94.502\\
+PC8 & 0.883 & 95.384\\
+PC9 & 0.609 & 95.993\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Explained variance for the NoLights condition}
+\begin{tabular}{ccc}
+\toprule
+Component & Individual variance (\%) & Cumulative variance (\%)\\
+\midrule
+PC1 & 42.043 & 42.043\\
+PC2 & 30.393 & 72.437\\
+PC3 & 10.227 & 82.663\\
+PC4 & 5.173 & 87.836\\
+PC5 & 2.434 & 90.270\\
+PC6 & 1.802 & 92.072\\
+PC7 & 1.223 & 93.294\\
+PC8 & 1.036 & 94.330\\
+PC9 & 0.910 & 95.240\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Reconstruction Error}
+The average MSE over all 105 images is shown below.
+
+\begin{table}[H]
+\centering
+\caption{Average reconstruction MSE over the complete dataset}
+\begin{tabular}{lrr}
+\toprule
+Component range & Lights & NoLights\\
+\midrule
+PC1--PC3 & 575.00 & 549.10\\
+PC5--PC9 & 2855.66 & 2932.77\\
+PC1--PC9 & 124.64 & 150.76\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Observations}
+PC1--PC3 captures dominant global variations, including broad facial structure and intensity or illumination patterns. PC5--PC9 contains lower-variance patterns and cannot independently preserve the dominant facial structure because it omits the first four components. Combining PC1--PC9 gives the lowest MSE among the tested component selections.
+
+The NoLights condition has a larger proportion of its variance concentrated in PC1 (42.043\%) than the Lights condition (32.685\%). The distribution of variance across subsequent components also differs between the two conditions.
+
+\section{Discussion}
+PCA selects directions of maximum total variance without using person labels. Consequently, its components can represent illumination changes as well as facial identity and structure. A component with a high variance contribution is not necessarily identity-specific. The numerical results also show why a component range should be interpreted together with the components it omits: PC5--PC9 has a higher MSE than PC1--PC3 because it excludes the dominant first four directions. PC1--PC9 gives the best reconstruction among the tested ranges.
+
+% =================================================
+\chapter{Question 2: Linear Discriminant Analysis (LDA)}
+% =================================================
+
+\section{Objective}
+The objective is to implement Linear Discriminant Analysis manually and compare its person-wise class separation with PCA projections under both illumination conditions.
+
+\section{Dataset and Experimental Setup}
+All five subjects were used, with 21 images per subject, giving 105 images per illumination condition. The original 10,000-dimensional images were first reduced to 30 PCA features. LDA was then applied to these features. The maximum number of meaningful discriminant directions is $C-1$, where $C$ is the number of classes. For five subjects, four LDA directions are available.
+
+\section{Why PCA is Applied Before LDA}
+The original feature dimension is 10,000, while the number of images is only 105. Directly forming and inverting a within-class scatter matrix in the original feature space would be singular or numerically unstable. PCA first reduces the feature dimension to 30, making the subsequent LDA calculation manageable and well-conditioned for this experiment.
+
+\section{Methodology}
+After PCA projection, let $\mathbf{z}_i$ be a 30-dimensional feature vector and let $C$ denote the number of classes. The within-class scatter matrix is
+\[
+S_W=\sum_{c=1}^{C}\sum_{\mathbf{z}\in\mathcal{C}_c}
+(\mathbf{z}-\boldsymbol{\mu}_c)(\mathbf{z}-\boldsymbol{\mu}_c)^T.
+\]
+The between-class scatter matrix is
+\[
+S_B=\sum_{c=1}^{C}N_c
+(\boldsymbol{\mu}_c-\boldsymbol{\mu})
+(\boldsymbol{\mu}_c-\boldsymbol{\mu})^T.
+\]
+LDA seeks directions that maximize the ratio of between-class to within-class scatter. A symmetric eigenvalue problem was constructed using the inverse square root of $S_W$:
+\[
+A=S_W^{-1/2}S_BS_W^{-1/2}.
+\]
+After eigendecomposition of $A$, the discriminant directions are recovered and sorted by descending eigenvalue. Since there are five classes, the first four meaningful directions are retained. The first two are used for the LD1--LD2 scatter plots.
+
+\section{Implementation Details}
+The implementation uses manual scatter-matrix construction and \texttt{numpy.linalg.eigh}. The PCA and LDA routines from scikit-learn were not used. Tiny numerical eigenvalues beyond the theoretical $C-1$ discriminant rank were discarded.
+
+\section{Results}
+
+\subsection{PCA and LDA Scatter Plots}
+\reportfigure{figures/q2_lights_pca_lda.png}
+{PCA (PC1 versus PC2) and LDA (LD1 versus LD2) projections for the Lights condition.}
+\reportfigure{figures/q2_nolights_pca_lda.png}
+{PCA (PC1 versus PC2) and LDA (LD1 versus LD2) projections for the NoLights condition.}
+
+\subsection{Fisher Separation Ratio}
+The separation ratio was calculated as the between-class scatter divided by the within-class scatter in the displayed two-dimensional feature space.
+
+\begin{table}[H]
+\centering
+\caption{PCA versus LDA separation ratio}
+\begin{tabular}{lrr}
+\toprule
+Condition & PCA (PC1--PC2) & LDA (LD1--LD2)\\
+\midrule
+Lights & 0.5142 & 622.1718\\
+NoLights & 0.2563 & 270.6606\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Three-Person Combination Analysis}
+Ten combinations of three subjects were evaluated.
+
+\begin{longtable}{p{0.68\textwidth}rr}
+\caption{LDA separation ratios for three-person combinations}\\
+\toprule
+Persons & Lights & NoLights\\
+\midrule
+\endfirsthead
+\toprule
+Persons & Lights & NoLights\\
+\midrule
+\endhead
+Person1 + Person2 + Person9 & 505.002205 & 103.659702\\
+Person1 + Person2 + Person19 & 906.053587 & 303.572017\\
+Person1 + Person2 + Person46 & 741.945569 & 363.104587\\
+Person1 + Person9 + Person19 & 1426.154599 & 467.649826\\
+Person1 + Person9 + Person46 & 1320.457715 & 607.296019\\
+Person1 + Person19 + Person46 & 1264.915632 & 622.322925\\
+Person2 + Person9 + Person19 & 1394.631236 & 316.323878\\
+Person2 + Person9 + Person46 & 1267.451750 & 836.737120\\
+Person2 + Person19 + Person46 & 1491.324500 & 564.848022\\
+Person9 + Person19 + Person46 & 2034.612112 & 805.692714\\
+\bottomrule
+\end{longtable}
+
+\section{Observations}
+PCA preserves directions of maximum overall variance, which may include illumination-related variation. Its two-dimensional projections show considerable overlap between subjects. LDA uses class labels to maximize between-class separation relative to within-class variation. The LDA scatter plots therefore show substantially more compact and distinct person-wise clusters under both illumination conditions.
+
+The Fisher separation ratio increases from 0.5142 to 622.1718 for Lights and from 0.2563 to 270.6606 for NoLights when moving from the PCA projection to the LDA projection. Across the three-person combinations, Lights ratios range from 505.00 to 2034.61, while NoLights ratios range from 103.66 to 836.74. The highest Lights ratio is obtained for Person9, Person19 and Person46 (2034.61). The highest NoLights ratio is obtained for Person2, Person9 and Person46 (836.74).
+
+\section{Discussion}
+The results demonstrate the difference between unsupervised variance preservation and supervised class discrimination. PCA does not use class labels, so high-variance illumination patterns can influence its projection. LDA explicitly uses the subject labels and provides a feature space that is more discriminative for the selected subjects. The separation ratio also depends on which subjects are included and on the illumination condition.
+
+% =================================================
+\chapter{Question 3: SVD for Image Denoising}
+% =================================================
+
+\section{Objective}
+The objective is to study low-rank image reconstruction as a denoising method. Three PIE face images were selected: Person1--Flash01, Person9--Flash01 and Person46--Flash01. Gaussian and Salt-and-Pepper noise were added, and the noisy images were reconstructed using the top 5, 20 and 50 singular values.
+
+\section{Noise Models}
+For Gaussian noise, zero-mean random noise with standard deviations $\sigma=10,25,50$ was tested. For Salt-and-Pepper noise, randomly selected pixels were replaced by extreme intensity values. The same three source images were used to compare the effect of noise and rank selection.
+
+\section{Manual SVD Method}
+For an image matrix $A$, the singular value decomposition is
+\[
+A=U\Sigma V^T.
+\]
+Instead of calling a built-in SVD routine, the singular values and singular vectors were computed through eigenvalue decomposition of a Gram matrix. For example, using $AA^T$:
+\[
+AA^T=U\Lambda U^T,\qquad \sigma_i=\sqrt{\lambda_i}.
+\]
+The right singular vectors are recovered from
+\[
+V^T=\Sigma^{-1}U^TA.
+\]
+A rank-$k$ approximation is then
+\[
+A_k=U_k\Sigma_kV_k^T.
+\]
+This procedure was applied to each noisy image.
+
+\section{Reconstruction Results}
+\reportfigure{figures/q3_gaussian_reconstruction.png}
+{Original, Gaussian-noisy and rank-5, rank-20 and rank-50 reconstructions for the three selected faces.}
+\reportfigure{figures/q3_salt_pepper_reconstruction.png}
+{Original, Salt-and-Pepper noisy and rank-5, rank-20 and rank-50 reconstructions.}
+\reportfigure{figures/q3_singular_values.png}
+{Comparison of singular value spectra for clean and Gaussian-noisy images.}
+
+\section{MSE Analysis}
+The average MSE across the three images for Gaussian noise was 542.60 for the noisy images, 247.71 for rank 5, 298.76 for rank 20 and 478.67 for rank 50. For Salt-and-Pepper noise, the corresponding values were 1105.96 for the noisy images and 324.00 for rank 5. The rank-5 reconstruction gave the lowest MSE among the three tested ranks for both noise types.
+
+\begin{table}[H]
+\centering
+\caption{Average MSE for the three images at Gaussian noise standard deviation 25}
+\begin{tabular}{lrr}
+\toprule
+Configuration & Gaussian noise & Salt-and-Pepper noise\\
+\midrule
+Noisy image & 542.60 & 1105.96\\
+Top 5 components & 247.71 & 324.00\\
+Top 20 components & 298.76 & 649.82\\
+Top 50 components & 478.67 & 1001.69\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Effect of Gaussian Noise Intensity}
+The average reconstructed MSE over the three images at different Gaussian noise levels is summarized below.
+
+\begin{table}[H]
+\centering
+\caption{Average reconstructed MSE at different Gaussian noise levels}
+\begin{tabular}{crrr}
+\toprule
+Noise standard deviation & Top 5 & Top 20 & Top 50\\
+\midrule
+10 & 195.03 & 60.17 & 82.74\\
+25 & 252.54 & 298.58 & 480.36\\
+50 & 472.40 & 1021.82 & 1629.16\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Observations and Discussion}
+The MSE results show that retaining only the top five singular values gives the lowest numerical reconstruction error for all three images in the tested Gaussian and Salt-and-Pepper experiments at the selected noise setting. However, the top-five reconstruction is strongly smoothed and loses fine facial details. Increasing the rank preserves more detail but also allows more noise to remain in the reconstruction.
+
+The best rank depends on noise intensity. At Gaussian standard deviation 10, rank 20 gives the lowest average MSE (60.17). At standard deviations 25 and 50, rank 5 performs best among the tested ranks. Thus, the lowest MSE does not necessarily correspond to the best perceptual reconstruction: denoising involves a trade-off between noise suppression and preservation of facial detail.
+
+% =================================================
+\chapter{Question 4: SVD-Based Movie Recommendation System}
+% =================================================
+
+\section{Objective}
+The objective is to build a collaborative-filtering movie recommendation system using manual SVD on the MovieLens 100K dataset. Low-rank approximations are used to predict ratings for user--movie pairs in the held-out test set and to generate personalized recommendations.
+
+\section{Dataset Description}
+MovieLens 100K contains 100,000 ratings from 943 users across 1,682 movies. Ratings are integers from 1 to 5. The user--movie matrix therefore has dimensions
+\[
+R\in\mathbb{R}^{943\times1682}.
+\]
+Unrated entries are represented by zero in the constructed matrix.
+
+\section{Train--Test Split and Matrix Construction}
+The observed ratings were divided into 80\% training data (80,000 ratings) and 20\% testing data (20,000 ratings). The training matrix contains 80,000 non-zero rating entries and has a density of approximately 5.04\%. User-wise means were calculated using only observed training ratings. Each observed rating was centered by subtracting the corresponding user's training mean; missing entries remained zero.
+
+\section{Manual SVD Implementation}
+Let $R_c$ denote the centered training matrix. To reduce the eigenvalue problem size, the Gram matrix
+\[
+G=R_cR_c^T,\qquad G\in\mathbb{R}^{943\times943}
+\]
+was formed. Its eigenvalue decomposition gives
+\[
+G=U\Lambda U^T.
+\]
+The singular values are
+\[
+\sigma_i=\sqrt{\lambda_i},
+\]
+and the right singular vectors are recovered using
+\[
+V^T=\Sigma^{-1}U^TR_c.
+\]
+The resulting decomposition is
+\[
+R_c=U\Sigma V^T.
+\]
+No built-in SVD routine was used.
+
+\section{Singular Value and Cumulative Energy Analysis}
+The cumulative squared singular-value energy is
+\[
+E(k)=\frac{\sum_{i=1}^{k}\sigma_i^2}
+{\sum_{i=1}^{r}\sigma_i^2}\times100\%.
+\]
+The experiment found that 321 components are required to retain at least 90\% of the total singular-value energy.
+
+\reportfigure{figures/q4_singular_value_energy.png}
+{Singular values and cumulative squared singular-value energy for the centered training matrix.}
+
+\section{Rating Prediction}
+For each tested rank $k\in\{5,10,20,50,100\}$, a low-rank approximation was constructed:
+\[
+\widehat{R}_{c,k}=U_k\Sigma_kV_k^T.
+\]
+The corresponding user mean was added back to each predicted entry. Predicted ratings were clipped to the valid rating interval $[1,5]$. The model was evaluated on the held-out test ratings only.
+
+\section{Recommendation Generation}
+The model with $k=10$ achieved the lowest test error among the tested ranks and was used to generate recommendations. Five users (IDs 1, 10, 100, 500 and 943) were selected. For each user, movies already rated in the training data were excluded, the remaining movies were ranked by predicted rating, and the ten highest-ranked movies were returned.
+
+\begin{table}[H]
+\centering
+\caption{Example Top-10 recommendations for User 1}
+\begin{tabular}{clc}
+\toprule
+Rank & Movie title & Predicted rating\\
+\midrule
+1 & Close Shave, A (1995) & 4.322\\
+2 & Titanic (1997) & 4.283\\
+3 & L.A. Confidential (1997) & 4.169\\
+4 & Dr. Strangelove or: How I Learned to Stop Worrying... & 4.127\\
+5 & Trainspotting (1996) & 4.108\\
+6 & Casablanca (1942) & 4.099\\
+7 & Schindler's List (1993) & 4.045\\
+8 & Harold and Maude (1971) & 3.990\\
+9 & It's a Wonderful Life (1946) & 3.979\\
+10 & English Patient, The (1996) & 3.960\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Evaluation}
+Prediction quality was measured using Mean Absolute Error and Root Mean Square Error:
+\[
+\mathrm{MAE}=\frac{1}{N}\sum_{(u,m)\in\Omega}
+|r_{um}-\hat r_{um}|,
+\]
+\[
+\mathrm{RMSE}=
+\sqrt{\frac{1}{N}\sum_{(u,m)\in\Omega}
+(r_{um}-\hat r_{um})^2}.
+\]
+The results are:
+
+\begin{table}[H]
+\centering
+\caption{Test-set prediction performance}
+\begin{tabular}{rrr}
+\toprule
+Components ($k$) & MAE & RMSE\\
+\midrule
+5 & 0.784795 & 0.991852\\
+10 & \textbf{0.780559} & \textbf{0.987493}\\
+20 & 0.783247 & 0.991055\\
+50 & 0.795900 & 1.005334\\
+100 & 0.811093 & 1.021614\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\reportfigure{figures/q4_model_evaluation.png}
+{MAE and RMSE as a function of the number of retained components.}
+
+\section{Discussion}
+The training rating matrix is sparse: only approximately 5.04\% of its entries contain observed training ratings. The low-rank approximation captures latent structure in the centered user--movie ratings and provides estimates for unseen user--movie pairs.
+
+The best test performance among the evaluated ranks was obtained at $k=10$. Increasing the rank beyond 10 increased both MAE and RMSE in this experiment. The 90\% energy threshold required 321 components, showing that preserving most matrix energy and minimizing held-out rating error are different objectives. The user-mean baseline and zero representation of missing entries are part of the implemented approach and influence the resulting predictions.
+
+\section{Conclusion}
+A manual SVD-based recommendation pipeline was implemented using the MovieLens 100K dataset. The user--movie matrix was split into training and test sets, centered using training-user means, decomposed through eigenvalue decomposition of a Gram matrix, and reconstructed using several low-rank choices. The model achieved its lowest tested MAE and RMSE at $k=10$ and generated Top-10 recommendations for five users.
+
+% =================================================
+\chapter{Overall Conclusion}
+% =================================================
+The assignment implemented PCA, LDA and SVD-based methods without relying on prohibited built-in decomposition routines. PCA revealed dominant facial and illumination variations, while LDA produced more discriminative subject-wise projections. Truncated SVD reduced image noise, with the best numerical rank depending on noise intensity and the visual-detail trade-off. Finally, manual SVD on the MovieLens 100K rating matrix generated personalized recommendations, with $k=10$ providing the best test-set MAE and RMSE among the evaluated ranks.
+
+\chapter*{References}
+\addcontentsline{toc}{chapter}{References}
+\begin{enumerate}
+    \item M. Turk and A. Pentland, ``Eigenfaces for Recognition,'' \textit{Journal of Cognitive Neuroscience}, vol. 3, no. 1, pp. 71--86, 1991.
+    \item T. Sim, S. Baker and M. Bsat, ``The CMU Pose, Illumination, and Expression (PIE) Database,'' Carnegie Mellon University, Robotics Institute Technical Report CMU-RI-TR-01-02, 2001.
+    \item F. M. Harper and J. A. Konstan, ``The MovieLens Datasets: History and Context,'' \textit{ACM Transactions on Interactive Intelligent Systems}, vol. 5, no. 4, Article 19, 2015.
+    \item NumPy Developers, ``NumPy Documentation,'' \url{https://numpy.org/doc/}.
+    \item GroupLens Research, ``MovieLens 100K Dataset,'' \url{https://grouplens.org/datasets/movielens/100k/}.
+    \item Course Assignment Handout, ``Assignment 01: PCA, LDA and SVD,'' Department of Data Science, 2026.
+\end{enumerate}
+
+\end{document}
